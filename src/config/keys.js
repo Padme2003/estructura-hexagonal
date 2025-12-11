@@ -1,7 +1,7 @@
 // Configuración MySQL LOCAL (para desarrollo)
 const MYSQLHOST = 'localhost';  // o '127.0.0.1'
 const MYSQLUSER = 'root';
-const MYSQLPASSWORD = 'root123';  // ⚠️ CAMBIA ESTO por tu password de MySQL
+const MYSQLPASSWORD = '';  // XAMPP sin password por defecto
 const MYSQLDATABASE = 'openblind';
 const MYSQLPORT = '3306';
 
