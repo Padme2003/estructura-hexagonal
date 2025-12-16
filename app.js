@@ -267,6 +267,7 @@ app.use('/reporte', require('./src/infrastructure/http/router/reporte.router'));
 app.use('/usuarios', require('./src/infrastructure/http/router/user.router'));
 app.use('/roles', require('./src/infrastructure/http/router/rol.router'));
 app.use('/detalle-rol', require('./src/infrastructure/http/router/detalleRol.router'));
+app.use('/contactos-emergencia', require('./src/infrastructure/http/router/contactoEmergencia.router'));
 
 // Configurar variables globales
 app.use((req, res, next) => {

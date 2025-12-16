@@ -92,6 +92,7 @@ const idiomaModel = require('../../../domain/models/sql/idioma');
 const calificacionModel = require('../../../domain/models/sql/calificacion');
 const tarifaModel = require('../../../domain/models/sql/tarifa');
 const clienteModel = require('../../../domain/models/sql/cliente');
+const contactoEmergenciaModel = require('../../../domain/models/sql/contactoEmergencia');
 
 // ==================== INSTANCIAR MODELOS ====================
 const usuario = usuarioModel(sequelize, Sequelize);
@@ -118,6 +119,7 @@ const idioma = idiomaModel(sequelize, Sequelize);
 const calificacion = calificacionModel(sequelize, Sequelize);
 const tarifa = tarifaModel(sequelize, Sequelize);
 const cliente = clienteModel(sequelize, Sequelize);
+const contactoEmergencia = contactoEmergenciaModel(sequelize, Sequelize);
 
 // ==================== RELACIONES (FOREIGN KEYS) ====================
 
@@ -236,6 +238,10 @@ tarifa.belongsTo(lugarTuristico, { constraints: false });
 usuario.hasMany(conductor, { foreignKey: 'idUser', constraints: false });
 conductor.belongsTo(usuario, { foreignKey: 'idUser', constraints: false });
 
+// RELACIONES CONTACTOS DE EMERGENCIA
+cliente.hasMany(contactoEmergencia, { foreignKey: 'clienteIdCliente', constraints: false });
+contactoEmergencia.belongsTo(cliente, { foreignKey: 'clienteIdCliente', constraints: false });
+
 // ==================== EXPORTAR MODELOS ====================
 module.exports = {
   // Autenticación y permisos
@@ -275,6 +281,7 @@ module.exports = {
   calificacion,
   tarifa,
   cliente,
+  contactoEmergencia,
 
   // Instancia de Sequelize (para queries directas)
   sequelize

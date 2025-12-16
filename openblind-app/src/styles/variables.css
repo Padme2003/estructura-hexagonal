@@ -1,0 +1,62 @@
+/* ==================== VARIABLES - PALETA ACCESIBLE ==================== */
+:root {
+  /* Púrpuras principales (OK para daltonismo) */
+  --primary: #7C3AED;
+  --primary-dark: #5B21B6;
+  --primary-light: #A78BFA;
+  --primary-lighter: #DDD6FE;
+
+  /* Acentos ámbar (alto contraste para daltonismo) */
+  --accent: #F59E0B;
+  --accent-dark: #D97706;
+  --accent-light: #FCD34D;
+
+  /* Fondos */
+  --bg-dark: #1F1B24;
+  --bg-medium: #2D2633;
+  --bg-light: #F5F3FF;
+  --bg-card: #FFFFFF;
+
+  /* Texto (Alto contraste para vista parcial) */
+  --text-primary: #1F1B24;
+  --text-secondary: #6B7280;
+  --text-light: #FFFFFF;
+  --text-muted: #9CA3AF;
+
+  /* Estados */
+  --success: #F59E0B;
+  --error: #DC2626;
+  --warning: #FBBF24;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 2px rgba(124, 58, 237, 0.05);
+  --shadow-md: 0 4px 6px rgba(124, 58, 237, 0.1);
+  --shadow-lg: 0 10px 25px rgba(124, 58, 237, 0.15);
+  --shadow-xl: 0 20px 40px rgba(124, 58, 237, 0.2);
+
+  /* Tamaños para vista parcial (MÁS GRANDES) */
+  --text-xs: 16px;
+  --text-sm: 18px;
+  --text-base: 20px;
+  --text-lg: 24px;
+  --text-xl: 28px;
+  --text-2xl: 32px;
+  --text-3xl: 40px;
+
+  /* Espaciado */
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Botones (GRANDES para adultos mayores) */
+  --button-height: 70px;
+  --button-height-lg: 90px;
+  --button-padding: 20px 24px;
+
+  /* Bordes */
+  --border-radius: 16px;
+  --border-radius-sm: 12px;
+  --border-radius-lg: 20px;
+}
