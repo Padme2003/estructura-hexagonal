@@ -102,7 +102,7 @@ const LeerPantallaButton = ({ currentView, ubicacion, lugaresCant, contactosCant
 // --- 2. VISTAS DE LA APLICACIÓN ---
 
 // --- VISTA DASHBOARD (CARRUSEL 3D + HERO UBICACIÓN) ---
-const Dashboard = ({ onChangeView, ubicacion }) => {
+const Dashboard = ({ onChangeView, ubicacion, onLogout, nombreCliente }) => {
   const modules = [
     { id: 'lugares', title: "Lugares", icon: "bookmark", desc: "Tus sitios favoritos", color: "#b026ff" },
     { id: 'contactos', title: "Contactos", icon: "contacts", desc: "Llamada rápida", color: "#ffae00" },
@@ -126,9 +126,9 @@ const Dashboard = ({ onChangeView, ubicacion }) => {
     } else if (command.includes('ubicación') || command.includes('ubicacion') || command.includes('donde')) {
       hablar('Abriendo ubicación actual');
       onChangeView('ubicacion');
-    } else if (command.includes('login') || command.includes('sesión') || command.includes('sesion')) {
-      hablar('Abriendo inicio de sesión');
-      onChangeView('login');
+    } else if (command.includes('salir') || command.includes('cerrar sesión') || command.includes('logout')) {
+      hablar('Cerrando sesión');
+      onLogout();
     }
   };
 
@@ -147,9 +147,12 @@ const Dashboard = ({ onChangeView, ubicacion }) => {
            <span style={{fontSize:'1.8rem'}}>🪐</span>
            <span className="navbar-title">OpenBlind</span>
         </div>
-        <AnimatedButton className="navbar-btn" onClick={() => onChangeView('login')}>
-           <span className="material-icons-round">person</span>
-        </AnimatedButton>
+        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+          <span style={{fontSize:'0.9rem', opacity:0.8}}>{nombreCliente}</span>
+          <AnimatedButton className="navbar-btn" onClick={onLogout} title="Cerrar sesión">
+             <span className="material-icons-round">logout</span>
+          </AnimatedButton>
+        </div>
       </nav>
 
       {/* HERO SECTION - Ubicación Actual */}
@@ -413,7 +416,7 @@ const RutasView = ({ onBack, ubicacion }) => {
 };
 
 // --- VISTA LUGARES (CRUD COMPLETO CON BACKEND) ---
-const LugaresView = ({ onBack }) => {
+const LugaresView = ({ onBack, clienteId }) => {
   const [lugares, setLugares] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -436,8 +439,6 @@ const LugaresView = ({ onBack }) => {
     { value: 'Otro', icon: 'place', emoji: '📍' }
   ];
 
-  const clienteId = 1;
-
   useEffect(() => {
     cargarLugares();
   }, []);
@@ -445,20 +446,48 @@ const LugaresView = ({ onBack }) => {
   const cargarLugares = async () => {
     try {
       setLoading(true);
-      const data = await lugaresService.getAll(clienteId);
-      setLugares(data);
-      hablar(`Tienes ${data.length} lugares favoritos`);
+      const data = await lugaresService.getAll();
+      setLugares(Array.isArray(data) ? data : []);
+      hablar(`Tienes ${(Array.isArray(data) ? data : []).length} lugares favoritos`);
     } catch (error) {
-      console.error('Error:', error);
-      hablar('Error al cargar lugares');
-      setLugares([
-        { idLugar: 1, nombreLugar: "Casa", direccionLugar: "Av. República E7-123", categoriaLugar: "Casa" },
-        { idLugar: 2, nombreLugar: "Trabajo", direccionLugar: "Centro Financiero", categoriaLugar: "Trabajo" }
-      ]);
+      console.error('Error al cargar lugares:', error);
+      hablar('Error al cargar lugares. Verifica tu conexión con el servidor.');
+      setLugares([]);
     } finally {
       setLoading(false);
     }
   };
+
+  // Comandos de voz para Lugares
+  const handleVoiceCommand = (command) => {
+    console.log('Comando Lugares:', command);
+    if (command.includes('nuevo') || command.includes('agregar') || command.includes('añadir')) {
+      hablar('Abriendo formulario nuevo lugar');
+      openEditModal();
+    } else if (command.includes('volver') || command.includes('atrás') || command.includes('regresar')) {
+      hablar('Volviendo');
+      onBack();
+    } else if (command.includes('guardar')) {
+      if (isEditOpen) {
+        hablar('Guardando lugar');
+        handleSave();
+      }
+    } else if (command.includes('cancelar')) {
+      if (isEditOpen) {
+        hablar('Cancelando');
+        setIsEditOpen(false);
+      }
+    } else {
+      // Buscar lugar por nombre
+      const lugarEncontrado = lugaresService.buscarPorNombre(command, lugares);
+      if (lugarEncontrado) {
+        hablar(`Encontré ${lugarEncontrado.nombreLugar}. ¿Quieres navegar?`);
+        setTimeout(() => navegarALugar(lugarEncontrado), 2000);
+      }
+    }
+  };
+
+  const { isListening, toggleListening } = useVoiceCommands(handleVoiceCommand);
 
   const openEditModal = (item = null) => {
     setCurrentItem(item || {
@@ -596,7 +625,7 @@ const LugaresView = ({ onBack }) => {
 };
 
 // --- VISTA CONTACTOS (CRUD COMPLETO CON BACKEND + EMERGENCIA CON SONIDO) ---
-const ContactosView = ({ onBack }) => {
+const ContactosView = ({ onBack, clienteId }) => {
   const [contactos, setContactos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -621,8 +650,6 @@ const ContactosView = ({ onBack }) => {
     { value: 'Otro', emoji: '👤' }
   ];
 
-  const clienteId = 1;
-
   useEffect(() => {
     cargarContactos();
   }, []);
@@ -631,16 +658,13 @@ const ContactosView = ({ onBack }) => {
     try {
       setLoading(true);
       const data = await contactosService.getAll(clienteId);
-      const ordenados = data.sort((a, b) => a.prioridadContacto - b.prioridadContacto);
+      const ordenados = (Array.isArray(data) ? data : []).sort((a, b) => a.prioridadContacto - b.prioridadContacto);
       setContactos(ordenados);
-      hablar(`Tienes ${data.length} contactos de emergencia`);
+      hablar(`Tienes ${ordenados.length} contactos de emergencia`);
     } catch (error) {
-      console.error('Error:', error);
-      hablar('Error al cargar contactos');
-      setContactos([
-        { idContactoEmergencia: 1, nombreContacto: "Mamá", telefonoContacto: "099 123 4567", relacionContacto: "Mamá", prioridadContacto: 1 },
-        { idContactoEmergencia: 2, nombreContacto: "Carlos Taxi", telefonoContacto: "098 765 4321", relacionContacto: "Otro", prioridadContacto: 2 }
-      ]);
+      console.error('Error al cargar contactos:', error);
+      hablar('Error al cargar contactos. Verifica tu conexión con el servidor.');
+      setContactos([]);
     } finally {
       setLoading(false);
     }
@@ -684,6 +708,43 @@ const ContactosView = ({ onBack }) => {
       }
     }
   };
+
+  // Comandos de voz para Contactos
+  const handleVoiceCommand = (command) => {
+    console.log('Comando Contactos:', command);
+    if (command.includes('emergencia') || command.includes('ayuda') || command.includes('socorro') || command.includes('sos')) {
+      hablar('Activando emergencia');
+      llamarEmergencia();
+    } else if (command.includes('nuevo') || command.includes('agregar') || command.includes('añadir')) {
+      hablar('Abriendo formulario nuevo contacto');
+      openEditModal();
+    } else if (command.includes('volver') || command.includes('atrás') || command.includes('regresar')) {
+      hablar('Volviendo');
+      onBack();
+    } else if (command.includes('guardar')) {
+      if (isEditOpen) {
+        hablar('Guardando contacto');
+        handleSave();
+      }
+    } else if (command.includes('cancelar')) {
+      if (isEditOpen) {
+        hablar('Cancelando');
+        setIsEditOpen(false);
+      }
+    } else if (command.includes('llamar')) {
+      // Buscar contacto por nombre
+      const contactoEncontrado = contactos.find(c =>
+        command.toLowerCase().includes(c.nombreContacto.toLowerCase())
+      );
+      if (contactoEncontrado) {
+        llamarContacto(contactoEncontrado);
+      } else if (contactos.length > 0) {
+        hablar('¿A quién quieres llamar?');
+      }
+    }
+  };
+
+  const { isListening, toggleListening } = useVoiceCommands(handleVoiceCommand);
 
   const openEditModal = (c = null) => {
     const siguientePrioridad = contactos.length > 0
@@ -1113,13 +1174,127 @@ const PlaceholderView = ({ title, icon, color, onBack }) => (
     </div>
 );
 
+// --- VISTA LOGIN ---
+const LoginView = ({ onLogin }) => {
+  const [cedula, setCedula] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!cedula.trim()) {
+      hablar('Por favor ingresa tu cédula');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Simular login exitoso - en producción aquí iría el endpoint real
+      // Por ahora creamos/buscamos cliente automáticamente
+      const clienteId = 1; // TODO: obtener del backend
+      const nombre = 'Usuario'; // TODO: obtener del backend
+
+      hablar(`Bienvenido ${nombre}`);
+      onLogin(clienteId, nombre);
+    } catch (error) {
+      console.error('Error login:', error);
+      hablar('Error al iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mobile-container">
+      <div style={{padding:'40px 20px', textAlign:'center'}}>
+        <motion.div
+          initial={{scale:0}}
+          animate={{scale:1}}
+          transition={{duration:0.5}}
+          style={{fontSize:'5rem', marginBottom:'20px'}}
+        >
+          🪐
+        </motion.div>
+
+        <h1 style={{fontSize:'2.5rem', marginBottom:'10px', background:'linear-gradient(135deg, #b026ff, #ff007f)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent'}}>
+          OpenBlind
+        </h1>
+        <p style={{opacity:0.8, marginBottom:'40px'}}>Navegación Accesible</p>
+
+        <div style={{maxWidth:'400px', margin:'0 auto'}}>
+          <input
+            type="text"
+            placeholder="Cédula (ejemplo: 1234567890)"
+            value={cedula}
+            onChange={(e) => setCedula(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+            style={{
+              width:'100%',
+              padding:'20px',
+              fontSize:'1.2rem',
+              borderRadius:'15px',
+              border:'2px solid rgba(176, 38, 255, 0.3)',
+              marginBottom:'20px',
+              background:'white'
+            }}
+          />
+
+          <AnimatedButton
+            onClick={handleLogin}
+            style={{
+              width:'100%',
+              padding:'20px',
+              fontSize:'1.3rem',
+              borderRadius:'15px',
+              background:'linear-gradient(135deg, #b026ff, #ff007f)',
+              color:'white',
+              border:'none',
+              fontWeight:'bold',
+              cursor:'pointer',
+              display:'flex',
+              alignItems:'center',
+              justifyContent:'center',
+              gap:'10px'
+            }}
+          >
+            <span className="material-icons-round">login</span>
+            {loading ? 'INGRESANDO...' : 'ENTRAR'}
+          </AnimatedButton>
+
+          <p style={{marginTop:'30px', opacity:0.6, fontSize:'0.9rem'}}>
+            Si no tienes cuenta, se creará automáticamente
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- APP PRINCIPAL ---
 function App() {
-  const [currentView, setCurrentView] = useState('dashboard');
+  const [currentView, setCurrentView] = useState('login');
   const [showSplash, setShowSplash] = useState(true);
   const [ubicacionActual, setUbicacionActual] = useState('Localizando...');
   const [lugaresCant, setLugaresCant] = useState(0);
   const [contactosCant, setContactosCant] = useState(0);
+
+  // Estado de autenticación
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [clienteId, setClienteId] = useState(null);
+  const [clienteNombre, setClienteNombre] = useState('');
+
+  const handleLogin = (id, nombre) => {
+    setClienteId(id);
+    setClienteNombre(nombre);
+    setIsAuthenticated(true);
+    setCurrentView('dashboard');
+  };
+
+  const handleLogout = () => {
+    setClienteId(null);
+    setClienteNombre('');
+    setIsAuthenticated(false);
+    setCurrentView('login');
+    hablar('Sesión cerrada');
+  };
 
   // Obtener ubicación actual al cargar
   useEffect(() => {
@@ -1135,11 +1310,15 @@ function App() {
         }
       });
     }
-
-    // Cargar cantidades
-    lugaresService.getAll(1).then(data => setLugaresCant(data.length)).catch(() => setLugaresCant(0));
-    contactosService.getAll(1).then(data => setContactosCant(data.length)).catch(() => setContactosCant(0));
   }, []);
+
+  // Cargar cantidades cuando cambia clienteId
+  useEffect(() => {
+    if (clienteId) {
+      lugaresService.getAll().then(data => setLugaresCant(Array.isArray(data) ? data.length : 0)).catch(() => setLugaresCant(0));
+      contactosService.getAll(clienteId).then(data => setContactosCant(Array.isArray(data) ? data.length : 0)).catch(() => setContactosCant(0));
+    }
+  }, [clienteId]);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2500);
@@ -1160,39 +1339,39 @@ function App() {
     <>
       <StarBackground />
       <AnimatePresence mode='wait'>
-        {currentView === 'dashboard' && (
+        {currentView === 'login' && (
+          <motion.div key="login" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
+            <LoginView onLogin={handleLogin} />
+          </motion.div>
+        )}
+        {currentView === 'dashboard' && isAuthenticated && (
           <motion.div key="dash" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
-            <Dashboard onChangeView={setCurrentView} ubicacion={ubicacionActual} />
+            <Dashboard onChangeView={setCurrentView} ubicacion={ubicacionActual} onLogout={handleLogout} nombreCliente={clienteNombre} />
             <LeerPantallaButton currentView="dashboard" ubicacion={ubicacionActual} lugaresCant={lugaresCant} contactosCant={contactosCant} />
           </motion.div>
         )}
-        {currentView === 'lugares' && (
+        {currentView === 'lugares' && isAuthenticated && (
           <motion.div key="lugares" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
-            <LugaresView onBack={() => setCurrentView('dashboard')} />
+            <LugaresView onBack={() => setCurrentView('dashboard')} clienteId={clienteId} />
             <LeerPantallaButton currentView="lugares" ubicacion={ubicacionActual} lugaresCant={lugaresCant} contactosCant={contactosCant} />
           </motion.div>
         )}
-        {currentView === 'contactos' && (
+        {currentView === 'contactos' && isAuthenticated && (
           <motion.div key="contactos" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
-            <ContactosView onBack={() => setCurrentView('dashboard')} />
+            <ContactosView onBack={() => setCurrentView('dashboard')} clienteId={clienteId} />
             <LeerPantallaButton currentView="contactos" ubicacion={ubicacionActual} lugaresCant={lugaresCant} contactosCant={contactosCant} />
           </motion.div>
         )}
-        {currentView === 'rutas' && (
+        {currentView === 'rutas' && isAuthenticated && (
           <motion.div key="rutas" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
             <RutasView onBack={() => setCurrentView('dashboard')} ubicacion={ubicacionActual} />
             <LeerPantallaButton currentView="rutas" ubicacion={ubicacionActual} lugaresCant={lugaresCant} contactosCant={contactosCant} />
           </motion.div>
         )}
-        {currentView === 'ubicacion' && (
+        {currentView === 'ubicacion' && isAuthenticated && (
           <motion.div key="ubicacion" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
             <UbicacionView onBack={() => setCurrentView('dashboard')} />
             <LeerPantallaButton currentView="ubicacion" ubicacion={ubicacionActual} lugaresCant={lugaresCant} contactosCant={contactosCant} />
-          </motion.div>
-        )}
-        {currentView === 'login' && (
-          <motion.div key="login" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
-            <PlaceholderView title="Login" icon="lock" color="#b026ff" onBack={() => setCurrentView('dashboard')} />
           </motion.div>
         )}
       </AnimatePresence>

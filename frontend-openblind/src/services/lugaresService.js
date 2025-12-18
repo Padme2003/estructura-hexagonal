@@ -1,10 +1,10 @@
 import api from './api'
 
 const lugaresService = {
-  // Obtener todos los lugares de un cliente
-  getAll: async (clienteId) => {
+  // Obtener todos los lugares
+  getAll: async () => {
     try {
-      const response = await api.get(`/lugares/cliente/${clienteId}`)
+      const response = await api.get('/lugares-turisticos/lista')
       return response.data
     } catch (error) {
       console.error('Error al obtener lugares:', error)
@@ -15,7 +15,7 @@ const lugaresService = {
   // Obtener un lugar por ID
   getById: async (id) => {
     try {
-      const response = await api.get(`/lugares/${id}`)
+      const response = await api.get(`/lugares-turisticos/obtener/${id}`)
       return response.data
     } catch (error) {
       console.error('Error al obtener lugar:', error)
@@ -26,7 +26,7 @@ const lugaresService = {
   // Crear nuevo lugar
   create: async (lugar) => {
     try {
-      const response = await api.post('/lugares/', lugar)
+      const response = await api.post('/lugares-turisticos/crear', lugar)
       return response.data
     } catch (error) {
       console.error('Error al crear lugar:', error)
@@ -37,7 +37,7 @@ const lugaresService = {
   // Actualizar lugar existente
   update: async (id, lugar) => {
     try {
-      const response = await api.put(`/lugares/${id}`, lugar)
+      const response = await api.put(`/lugares-turisticos/actualizar/${id}`, lugar)
       return response.data
     } catch (error) {
       console.error('Error al actualizar lugar:', error)
@@ -48,7 +48,7 @@ const lugaresService = {
   // Eliminar lugar
   delete: async (id) => {
     try {
-      const response = await api.delete(`/lugares/${id}`)
+      const response = await api.delete(`/lugares-turisticos/eliminar/${id}`)
       return response.data
     } catch (error) {
       console.error('Error al eliminar lugar:', error)
