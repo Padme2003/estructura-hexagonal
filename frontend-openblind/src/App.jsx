@@ -13,6 +13,7 @@ export default function App() {
   const [view, setView] = useState("home");
   const [clienteId, setClienteId] = useState(1); // Por ahora hardcodeado
   const [ubicacionActual, setUbicacionActual] = useState("Localizando...");
+  const [coordenadas, setCoordenadas] = useState({ lat: null, lon: null });
 
   // Estados Lugares
   const [lugares, setLugares] = useState([]);
@@ -67,8 +68,20 @@ export default function App() {
       } else if (comando.includes('contacto') || comando.includes('emergencia')) {
         setView('contactos');
         hablar('Abriendo contactos de emergencia');
-      } else if (comando.includes('ubicación') || comando.includes('donde estoy')) {
+      } else if (comando.includes('ubicación') || comando.includes('donde estoy') || comando.includes('donde') || comando.includes('ubicacion')) {
+        setView('ubicacion');
+        hablar('Abriendo ubicación actual');
+      }
+    }
+    // UBICACIÓN
+    else if (view === 'ubicacion') {
+      if (comando.includes('volver') || comando.includes('inicio')) {
+        setView('home');
+        hablar('Volviendo al inicio');
+      } else if (comando.includes('donde estoy') || comando.includes('ubicacion')) {
         hablar(`Estás en ${ubicacionActual}`);
+      } else if (comando.includes('compartir')) {
+        compartirUbicacion();
       }
     }
     // LUGARES
@@ -123,6 +136,7 @@ export default function App() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async (pos) => {
         const { latitude, longitude } = pos.coords;
+        setCoordenadas({ lat: latitude, lon: longitude });
         try {
           const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
           const data = await res.json();
@@ -133,6 +147,20 @@ export default function App() {
       });
     }
   }, []);
+
+  // Función compartir ubicación
+  const compartirUbicacion = () => {
+    if (coordenadas.lat && coordenadas.lon) {
+      const mensaje = `Mi ubicación: ${ubicacionActual}\nCoordenadas: ${coordenadas.lat.toFixed(5)}, ${coordenadas.lon.toFixed(5)}\nMapa: https://www.google.com/maps?q=${coordenadas.lat},${coordenadas.lon}`;
+      if (navigator.share) {
+        navigator.share({ title: 'Mi ubicación', text: mensaje });
+        hablar('Compartiendo ubicación');
+      } else {
+        navigator.clipboard.writeText(mensaje);
+        hablar('Ubicación copiada al portapapeles');
+      }
+    }
+  };
 
   // ==================== LUGARES - CRUD ====================
   useEffect(() => {
@@ -268,6 +296,14 @@ export default function App() {
           </div>
 
           <div className="menu-list">
+            <div className="card-module" onClick={() => { setView('ubicacion'); hablar("Abriendo Ubicación"); }}>
+              <div className="info">
+                <h3>📍 Ubicación Actual</h3>
+                <p>Ver dónde estás ahora</p>
+              </div>
+              <span className="material-icons-round" style={{color:'var(--primary)', fontSize:'30px'}}>my_location</span>
+            </div>
+
             <div className="card-module" onClick={() => { setView('lugares'); hablar("Abriendo Lugares"); }}>
               <div className="info">
                 <h3>🏠 Lugares Favoritos</h3>
@@ -288,6 +324,80 @@ export default function App() {
           <div className="action-area">
             <button className="btn-main" onClick={iniciarVoz} style={{background: escuchando ? 'var(--accent)' : 'var(--primary)'}}>
               <span className="material-icons-round">{escuchando ? 'mic' : 'mic_none'}</span>
+              {escuchando ? 'ESCUCHANDO...' : 'COMANDO DE VOZ'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== UBICACIÓN ==================== */}
+      {view === "ubicacion" && (
+        <div className="view-full" style={{paddingTop:'45px'}}>
+          <div style={{padding:'0 20px'}}>
+            <button className="btn-icon-back" onClick={() => setView('home')} style={{background:'none', border:'none', color:'var(--primary)', fontWeight:'bold', marginBottom:'10px'}}>
+              <span className="material-icons-round">arrow_back</span> VOLVER
+            </button>
+
+            <h2 style={{fontSize:'1.5rem', marginBottom:'15px'}}>📍 Mi Ubicación</h2>
+
+            {/* INFORMACIÓN GPS */}
+            <div style={{background:'white', padding:'20px', borderRadius:'20px', marginBottom:'15px'}}>
+              <div style={{marginBottom:'15px'}}>
+                <h4 style={{margin:'0 0 8px 0', fontSize:'0.9rem', opacity:0.6}}>DIRECCIÓN:</h4>
+                <p style={{margin:0, fontSize:'1.1rem', fontWeight:'bold'}}>{ubicacionActual}</p>
+              </div>
+
+              {coordenadas.lat && coordenadas.lon && (
+                <div>
+                  <h4 style={{margin:'15px 0 8px 0', fontSize:'0.9rem', opacity:0.6}}>COORDENADAS GPS:</h4>
+                  <p style={{margin:0, fontSize:'1rem', fontFamily:'monospace'}}>
+                    📍 {coordenadas.lat.toFixed(5)}, {coordenadas.lon.toFixed(5)}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* MAPA */}
+            {coordenadas.lat && coordenadas.lon && (
+              <div className="map-frame">
+                <iframe
+                  title="Mapa de ubicación"
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                  style={{border:0}}
+                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${coordenadas.lon-0.01},${coordenadas.lat-0.01},${coordenadas.lon+0.01},${coordenadas.lat+0.01}&layer=mapnik&marker=${coordenadas.lat},${coordenadas.lon}`}
+                  allowFullScreen
+                />
+              </div>
+            )}
+
+            {/* ACCIONES */}
+            <div style={{marginTop:'15px', display:'flex', gap:'10px'}}>
+              <button
+                className="btn-nav"
+                onClick={compartirUbicacion}
+                style={{background:'var(--primary)', color:'white', flex:1}}
+              >
+                <span className="material-icons-round">share</span> COMPARTIR
+              </button>
+              {coordenadas.lat && coordenadas.lon && (
+                <button
+                  onClick={() => {
+                    hablar('Abriendo en Google Maps');
+                    window.open(`https://www.google.com/maps?q=${coordenadas.lat},${coordenadas.lon}`, '_blank');
+                  }}
+                  style={{background:'var(--accent)', color:'white', flex:1, padding:'12px', borderRadius:'15px', border:'none', fontWeight:'700', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px'}}
+                >
+                  <span className="material-icons-round">map</span> VER EN MAPA
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="action-area">
+            <button className="btn-main" onClick={iniciarVoz} style={{background: escuchando ? 'var(--accent)' : 'var(--primary)'}}>
+              <span className="material-icons-round">{escuchando ? 'mic' : 'volume_up'}</span>
               {escuchando ? 'ESCUCHANDO...' : 'COMANDO DE VOZ'}
             </button>
           </div>
